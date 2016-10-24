@@ -168,6 +168,22 @@ def whoosh_index(app, model):
     return app.whoosh_indexes.get(model.__name__,
                 _create_index(app, model))
 
+
+def index_model(app, model):
+    if not hasattr(app, 'whoosh_indexes'):
+        app.whoosh_indexes = {}
+
+    model_index = app.whoosh_indexes.get(model.__name__)
+    if model_index:
+        writer = model_index.writer()
+        for model_item in model.query.all():
+            schema_dict = {}
+            for schema_item in model_index.schema.names():
+                schema_dict[schema_item] = str(getattr(model_item, schema_item))
+            writer.add_document(**schema_dict)
+        writer.commit()
+
+
 def _get_analyzer(app, model):
     analyzer = getattr(model, '__analyzer__', None)
 
