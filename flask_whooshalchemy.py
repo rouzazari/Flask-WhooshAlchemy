@@ -155,7 +155,7 @@ class _Searcher(object):
                 limit=limit)
 
 
-def whoosh_index(app, model):
+def whoosh_index(app, model, field_type=whoosh.fields.TEXT):
     ''' Create whoosh index for ``model``, if one does not exist. If
     the index exists it is opened and cached. '''
 
@@ -166,7 +166,7 @@ def whoosh_index(app, model):
         app.whoosh_indexes = {}
 
     return app.whoosh_indexes.get(model.__name__,
-                _create_index(app, model))
+                _create_index(app, model, field_type))
 
 
 def index_model(app, model):
@@ -195,7 +195,7 @@ def _get_analyzer(app, model):
 
     return analyzer
 
-def _create_index(app, model):
+def _create_index(app, model, field_type):
     # a schema is created based on the fields of the model. Currently we only
     # support primary key -> whoosh.ID, and sqlalchemy.(String, Unicode, Text)
     # -> whoosh.TEXT.
@@ -213,7 +213,7 @@ def _create_index(app, model):
             model.__name__)
 
     analyzer = _get_analyzer(app, model)
-    schema, primary_key = _get_whoosh_schema_and_primary_key(model, analyzer)
+    schema, primary_key = _get_whoosh_schema_and_primary_key(model, analyzer, field_type)
 
     if whoosh.index.exists_in(wi):
         indx = whoosh.index.open_dir(wi)
@@ -233,7 +233,7 @@ def _create_index(app, model):
     return indx
 
 
-def _get_whoosh_schema_and_primary_key(model, analyzer):
+def _get_whoosh_schema_and_primary_key(model, analyzer, field_type):
     schema = {}
     primary = None
     searchable = set(model.__searchable__)
@@ -247,7 +247,7 @@ def _get_whoosh_schema_and_primary_key(model, analyzer):
                 (sqlalchemy.types.Text, sqlalchemy.types.String,
                     sqlalchemy.types.Unicode)):
 
-            schema[field.name] = whoosh.fields.TEXT(analyzer=analyzer)
+            schema[field.name] = field_type()
 
     return Schema(**schema), primary
 
